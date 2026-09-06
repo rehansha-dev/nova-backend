@@ -22,22 +22,23 @@ app.get('/api/test', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.get('/api/setup-roles', async (req, res) => {
+app.get('/api/make-organiser/:email', async (req, res) => {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL
-      );
-    `);
-    await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'student'");
-    res.send('Users table and role column created successfully!');
+    const email = req.params.email;
+    const result = await pool.query(
+      "UPDATE users SET role = 'organiser' WHERE email = $1 RETURNING *",
+      [email]
+    );
+    if (result.rows.length === 0) {
+      return res.send('User not found with that email. Register first!');
+    }
+    res.send(`Success! User ${email} is now an organiser.`);
   } catch (err) {
     console.error(err);
     res.status(500).send('Error: ' + err.message);
   }
 });
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
