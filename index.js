@@ -24,8 +24,15 @@ app.get('/api/test', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.get('/api/setup-roles', async (req, res) => {
   try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL
+      );
+    `);
     await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'student'");
-    res.send('Role column added successfully!');
+    res.send('Users table and role column created successfully!');
   } catch (err) {
     console.error(err);
     res.status(500).send('Error: ' + err.message);
