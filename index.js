@@ -63,6 +63,50 @@ app.post('/api/events', async (req, res) => {
     res.status(500).json({ error: 'Server error while creating event' });
   }
 });
+
+// Signup Route
+app.post('/api/signup', async (req, res) => {
+  try {
+    const { name, email, password, department, year } = req.body;
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check if user already exists
+    const existing = await pool.query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ success: false, message: 'An account with this email already exists.' });
+    }
+
+    // Insert new user with default 'student' role
+    const newUser = await pool.query(
+      'INSERT INTO users (name, email, password, department, year, role) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, email, department, year, role',
+      [name.trim(), normalizedEmail, password, department.trim(), year, 'student']
+    );
+
+    res.status(201).json({ success: true, message: 'Account created successfully.', user: newUser.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error during signup' });
+  }
+});
+
+// Login Route
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const result = await pool.query('SELECT * FROM users WHERE email = $1 AND password = $2', [normalizedEmail, password]);
+    if (result.rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'Incorrect email or password.' });
+    }
+
+    const user = result.rows[0];
+    res.json({ success: true, message: 'Login successful.', user: { id: user.id, name: user.name, email: user.email, department: user.department, year: user.year, role: user.role } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error during login' });
+  }
+});
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
